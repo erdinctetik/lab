@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tavşan Yapıcı - Kendi Oyununu Tasarla</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Arial', sans-serif;
+            background-color: #E1F5FE;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* --- ÜST PANEL (EDİTÖR ARAÇLARI) --- */
+        .editor-bar {
+            background: white;
+            width: 90%;
+            padding: 10px 20px;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tool-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .tool-btn {
+            width: 50px;
+            height: 50px;
+            font-size: 1.8rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tool-btn.active {
+            border-color: #2196F3;
+            background-color: #E3F2FD;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+        }
+
+        .size-input {
+            width: 50px;
+            padding: 5px;
+            font-size: 1.2rem;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        /* --- ANA OYUN ALANI --- */
+        .game-wrapper {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .grid-board {
+            display: grid;
+            gap: 4px;
+            background-color: #AED581;
+            padding: 10px;
+            border-radius: 15px;
+            border: 6px solid #558b2f;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            background-color: #DCEDC8;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5rem;
+            cursor: pointer; /* Editörde tıklanabilir */
+            user-select: none;
+        }
+        .cell:hover { background-color: #C5E1A5; }
+
+        .wall { background-color: #33691e; }
+        .rabbit { background-color: #FFF9C4; }
+
+        /* --- SAĞ PANEL (OYUNCU KONTROLLERİ) --- */
+        .play-panel {
+            display: none; /* Başlangıçta gizli */
+            flex-direction: column;
+            align-items: center;
+            width: 280px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .command-area {
+            width: 100%;
+            min-height: 100px;
+            background-color: #f5f5f5;
+            border: 2px dashed #bbb;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 10px;
+            gap: 5px;
+        }
+
+        .queue-arrow {
+            width: 30px;
+            height: 30px;
+            font-size: 1.2rem;
+            background: #fff;
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ddd;
+        }
+
+        .current-command {
+            background-color: #FF5722 !important;
+            color: white !important;
+            transform: scale(1.2);
+            border-color: #E64A19;
+        }
+
+        .arrows-pad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            width: 60px;
+            height: 60px;
+            font-size: 2rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+        }
+        .btn:active { transform: translateY(4px); box-shadow: none; }
+        .btn-arrow { background-color: #FFEB3B; color: #d35400; }
+        .btn-go { background-color: #4CAF50; color: white; width: 100%; font-size: 1.5rem; border-radius: 10px; margin-top:10px; padding: 10px; }
+        .btn-reset { background-color: #F44336; color: white; width: 100%; font-size: 1.2rem; border-radius: 10px; margin-top:5px; padding: 10px; }
+
+        /* MOD DEĞİŞTİRME BUTONLARI */
+        .mode-btn {
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-start-play { background-color: #4CAF50; color: white; box-shadow: 0 4px 0 #2E7D32; }
+        .btn-edit-mode { background-color: #2196F3; color: white; display: none; margin-bottom: 10px; width: 100%; box-shadow: 0 4px 0 #1565C0; }
+
+        /* Uyarı ve Tebrikler */
+        #overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center; align-items: center; z-index: 100;
+        }
+        .popup { background: white; padding: 30px; border-radius: 20px; text-align: center; }
+
+    </style>
+</head>
+<body>
+
+    <div class="editor-bar" id="editor-controls">
+        <div class="tool-group">
+            <span style="font-weight:bold; color:#555;">Boyut:</span>
+            <input type="number" id="grid-size" class="size-input" value="5" min="3" max="12" onchange="createGrid()">
+            <button class="mode-btn btn-start-play" onclick="switchToPlayMode()">OYNA ▶️</button>
+        </div>
+        
+        <div class="tool-group">
+            <span style="font-weight:bold; color:#555;">Araçlar:</span>
+            <button class="tool-btn active" onclick="selectTool('wall')" title="Duvar">🌳</button>
+            <button class="tool-btn" onclick="selectTool('rabbit')" title="Tavşan (Başlangıç)">🐰</button>
+            <button class="tool-btn" onclick="selectTool('carrot')" title="Havuç (Hedef)">🥕</button>
+            <button class="tool-btn" onclick="selectTool('eraser')" title="Silgi">⬜</button>
+        </div>
+    </div>
+
+    <div class="game-wrapper">
+        <div class="grid-board" id="board"></div>
+
+        <div class="play-panel" id="play-controls">
+            <button class="mode-btn btn-edit-mode" onclick="switchToEditMode()">✏️ Düzenle</button>
+            
+            <div class="command-area" id="queue-display">Komutlar buraya...</div>
+
+            <div class="arrows-pad">
+                <div></div>
+                <button class="btn btn-arrow" onclick="addCommand('up')">⬆️</button>
+                <div></div>
+                <button class="btn btn-arrow" onclick="addCommand('left')">⬅️</button>
+                <button class="btn btn-arrow" onclick="addCommand('down')">⬇️</button>
+                <button class="btn btn-arrow" onclick="addCommand('right')">➡️</button>
+            </div>
+
+            <button class="btn btn-go" onclick="runCode()">GİT ▶️</button>
+            <button class="btn btn-reset" onclick="resetCommands()">Temizle 🗑️</button>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <div class="popup">
+            <h2 id="popup-title">Mesaj</h2>
+            <p id="popup-msg">İçerik</p>
+            <button class="mode-btn btn-start-play" onclick="closePopup()">Tamam</button>
+        </div>
+    </div>
+
+<script>
+    // --- DEĞİŞKENLER ---
+    let gridSize = 5;
+    let mode = 'EDIT'; // 'EDIT' veya 'PLAY'
+    let currentTool = 'wall'; // wall, rabbit, carrot, eraser
+    
+    // Harita Verisi: 2D Dizi. 0: Boş, 1: Duvar, 2: Tavşan, 3: Havuç
+    let mapData = []; 
+    let rabbitStartPos = null;
+    
+    // Oyun Değişkenleri
+    let playRabbitPos = {x:0, y:0};
+    let commands = [];
+    let isRunning = false;
+
+    // --- BAŞLANGIÇ ---
+    window.onload = () => {
+        createGrid();
+    };
+
+    // --- EDİTÖR FONKSİYONLARI ---
+    
+    function createGrid() {
+        const sizeInput = document.getElementById('grid-size');
+        // Sınırlar (Min 3, Max 12)
+        if (sizeInput.value < 3) sizeInput.value = 3;
+        if (sizeInput.value > 12) sizeInput.value = 12;
+        
+        gridSize = parseInt(sizeInput.value);
+        mapData = [];
+        rabbitStartPos = null;
+
+        const board = document.getElementById('board');
+        board.style.gridTemplateColumns = `repeat(${gridSize}, 60px)`;
+        board.style.gridTemplateRows = `repeat(${gridSize}, 60px)`;
+        board.innerHTML = '';
+
+        // Boş Harita Oluştur
+        for (let y = 0; y < gridSize; y++) {
+            let row = [];
+            for (let x = 0; x < gridSize; x++) {
+                row.push(0); // 0 = Boş
+                
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.x = x;
+                cell.dataset.y = y;
+                cell.onclick = () => onCellClick(x, y); // Tıklama Olayı
+                board.appendChild(cell);
+            }
+            mapData.push(row);
+        }
+    }
+
+    function selectTool(tool) {
+        currentTool = tool;
+        // Butonların görselini güncelle
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        // Basitçe: event.target kullanılabilir ama ikon tıklanınca sorun olabiliyor,
+        // bu yüzden title üzerinden bulalım veya sırayla.
+        // Hızlı çözüm:
+        const btnMap = {'wall':0, 'rabbit':1, 'carrot':2, 'eraser':3};
+        document.querySelectorAll('.tool-btn')[btnMap[tool]].classList.add('active');
+    }
+
+    function onCellClick(x, y) {
+        if (mode !== 'EDIT') return;
+
+        const currentVal = mapData[y][x];
+
+        // Tavşan ve Havuçtan sadece 1 tane olabilir.
+        // Eğer yeni bir tavşan koyuyorsak, eskisini silmeliyiz.
+        if (currentTool === 'rabbit') {
+            clearItemFromMap(2); // Eskiyi sil
+            mapData[y][x] = 2;
+        } else if (currentTool === 'carrot') {
+            clearItemFromMap(3); // Eskiyi sil
+            mapData[y][x] = 3;
+        } else if (currentTool === 'wall') {
+            // Zaten duvar varsa sil, yoksa koy (toggle)
+            mapData[y][x] = (currentVal === 1) ? 0 : 1;
+            // Eğer duvarın üstünde tavşan/havuç varsa silinir
+        } else if (currentTool === 'eraser') {
+            mapData[y][x] = 0;
+        }
+
+        renderBoard(); // Görüntüyü güncelle
+    }
+
+    function clearItemFromMap(itemCode) {
+        for(let y=0; y<gridSize; y++) {
+            for(let x=0; x<gridSize; x++) {
+                if(mapData[y][x] === itemCode) mapData[y][x] = 0;
+            }
+        }
+    }
+
+    // --- ORTAK RENDER (GÖRÜNTÜLEME) ---
+    function renderBoard(isPlaying = false) {
+        const board = document.getElementById('board');
+        const cells = board.children;
+
+        for (let y = 0; y < gridSize; y++) {
+            for (let x = 0; x < gridSize; x++) {
+                const index = y * gridSize + x;
+                const cell = cells[index];
+                const val = mapData[y][x];
+
+                // Temizle
+                cell.className = 'cell';
+                cell.innerText = '';
+                cell.style.backgroundColor = '#DCEDC8';
+
+                // Editördeysek haritayı çiz, Oyundaysak oyun durumunu çiz
+                if (!isPlaying) {
+                    if (val === 1) { cell.classList.add('wall'); cell.innerText = '🌳'; }
+                    else if (val === 2) { cell.innerText = '🐰'; cell.style.backgroundColor = '#FFF9C4'; }
+                    else if (val === 3) { cell.innerText = '🥕'; }
+                } else {
+                    // OYUN MODU ÇİZİMİ
+                    if (val === 1) { cell.classList.add('wall'); cell.innerText = '🌳'; }
+                    else if (val === 3) { cell.innerText = '🥕'; }
+                    
+                    // Oynarken tavşan hareket ediyor, mapData'da değil playRabbitPos'ta
+                    if (x === playRabbitPos.x && y === playRabbitPos.y) {
+                        cell.innerText = '🐰';
+                        cell.style.backgroundColor = '#FFF9C4';
+                    }
+                }
+            }
+        }
+    }
+
+    // --- MOD GEÇİŞLERİ ---
+    
+    function switchToPlayMode() {
+        // Kontrol: Tavşan ve Havuç var mı?
+        let hasRabbit = false;
+        let hasCarrot = false;
+
+        for(let row of mapData) {
+            if(row.includes(2)) hasRabbit = true;
+            if(row.includes(3)) hasCarrot = true;
+        }
+
+        if (!hasRabbit) { showPopup("Uyarı", "Lütfen haritaya bir Tavşan (🐰) koy!"); return; }
+        if (!hasCarrot) { showPopup("Uyarı", "Lütfen haritaya bir Havuç (🥕) koy!"); return; }
+
+        // Tavşanın başlangıç pozisyonunu bul
+        for(let y=0; y<gridSize; y++) {
+            for(let x=0; x<gridSize; x++) {
+                if(mapData[y][x] === 2) {
+                    rabbitStartPos = {x, y};
+                    playRabbitPos = {x, y}; // Oyun için kopyala
+                }
+            }
+        }
+
+        mode = 'PLAY';
+        commands = [];
+        updateQueueDisplay();
+        
+        // UI Değişiklikleri
+        document.getElementById('editor-controls').style.display = 'none';
+        document.getElementById('play-controls').style.display = 'flex';
+        document.querySelector('.btn-edit-mode').style.display = 'block';
+
+        renderBoard(true); // Oyun modunda çiz
+    }
+
+    function switchToEditMode() {
+        if(isRunning) return; // Oyun çalışırken dönülmez
+        
+        mode = 'EDIT';
+        document.getElementById('editor-controls').style.display = 'flex';
+        document.getElementById('play-controls').style.display = 'none';
+        
+        renderBoard(false); // Editör modunda çiz
+    }
+
+    // --- OYUN MANTIĞI (ÖNCEKİ KODDAN UYARLANDI) ---
+
+    function addCommand(direction) {
+        if (isRunning) return;
+        if (commands.length < 20) {
+            commands.push(direction);
+            updateQueueDisplay();
+        }
+    }
+
+    function updateQueueDisplay() {
+        const display = document.getElementById('queue-display');
+        display.innerHTML = '';
+        if (commands.length === 0) {
+            display.innerText = "Komutlar buraya...";
+            return;
+        }
+
+        const arrows = { 'up': '⬆️', 'down': '⬇️', 'left': '⬅️', 'right': '➡️' };
+        commands.forEach((cmd, index) => {
+            const div = document.createElement('div');
+            div.className = 'queue-arrow';
+            div.innerText = arrows[cmd];
+            div.id = `cmd-${index}`;
+            display.appendChild(div);
+        });
+    }
+
+    function resetCommands() {
+        if (isRunning) return;
+        commands = [];
+        playRabbitPos = {...rabbitStartPos}; // Başa dön
+        updateQueueDisplay();
+        renderBoard(true);
+    }
+
+    async function runCode() {
+        if (commands.length === 0 || isRunning) return;
+        
+        isRunning = true;
+        
+        // Önce tavşanı başlangıca al
+        playRabbitPos = {...rabbitStartPos};
+        renderBoard(true);
+
+        const arrowElements = document.getElementsByClassName('queue-arrow');
+
+        for (let i = 0; i < commands.length; i++) {
+            // Işık Yak
+            if(arrowElements[i]) arrowElements[i].classList.add('current-command');
+
+            await moveRabbit(commands[i]);
+
+            // Işık Söndür
+            if(arrowElements[i]) arrowElements[i].classList.remove('current-command');
+
+            // Hedef Kontrolü (Harita verisinde 3 numara havuçtur)
+            if (mapData[playRabbitPos.y][playRabbitPos.x] === 3) {
+                showPopup("Tebrikler! 🎉", "Tavşan havucu yedi!");
+                isRunning = false;
+                return;
+            }
+        }
+        
+        isRunning = false;
+    }
+
+    function moveRabbit(direction) {
+        return new Promise(resolve => {
+            setTimeout(() => {
+                let newX = playRabbitPos.x;
+                let newY = playRabbitPos.y;
+
+                if (direction === 'up') newY--;
+                if (direction === 'down') newY++;
+                if (direction === 'left') newX--;
+                if (direction === 'right') newX++;
+
+                // Sınır Kontrolü
+                if (newX >= 0 && newX < gridSize && newY >= 0 && newY < gridSize) {
+                    // Duvar Kontrolü (1 numara duvardır)
+                    if (mapData[newY][newX] !== 1) {
+                        playRabbitPos = {x: newX, y: newY};
+                        renderBoard(true);
+                    } else {
+                        // Duvara çarpma animasyonu eklenebilir
+                    }
+                }
+                resolve();
+            }, 500);
+        });
+    }
+
+    // --- POPUP YÖNETİMİ ---
+    function showPopup(title, msg) {
+        document.getElementById('popup-title').innerText = title;
+        document.getElementById('popup-msg').innerText = msg;
+        document.getElementById('overlay').style.display = 'flex';
+    }
+
+    function closePopup() {
+        document.getElementById('overlay').style.display = 'none';
+        // Eğer oyun bittiyse ve editöre dönmek isterse diye reset atabiliriz
+        if (mode === 'PLAY') {
+             resetCommands();
+        }
+    }
+
+</script>
+</body>
+</html>
